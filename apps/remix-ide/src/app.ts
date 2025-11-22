@@ -79,6 +79,7 @@ import { DesktopHost } from './app/plugins/electron/desktopHostPlugin'
 import { WalletConnect } from './app/plugins/walletconnect'
 import { AIDappGenerator } from './app/plugins/ai-dapp-generator'
 import { EnvironmentPlugin } from './app/udapp/udappEnv'
+import { DeployPlugin } from './app/udapp/udappDeploy'
 
 import { TemplatesSelectionPlugin } from './app/plugins/templates-selection/templates-selection-plugin'
 
@@ -436,6 +437,7 @@ class AppComponent {
     const walletConnect = new WalletConnect()
 
     const udappEnvPlugin = new EnvironmentPlugin()
+    const udappDeployPlugin = new DeployPlugin()
 
     this.engine.register([
       permissionHandler,
@@ -501,7 +503,8 @@ class AppComponent {
       amp,
       // vega,
       chartjs,
-      udappEnvPlugin
+      udappEnvPlugin,
+      udappDeployPlugin
     ])
 
     //---- fs plugin
@@ -790,7 +793,8 @@ class AppComponent {
     if (isElectron()){
       this.appManager.activatePlugin(['desktopHost'])
     }
-    this.appManager.activatePlugin(['udappEnv'])
+    await this.appManager.activatePlugin(['udappEnv'])
+    await this.appManager.activatePlugin(['udappDeploy'])
   }
 }
 
