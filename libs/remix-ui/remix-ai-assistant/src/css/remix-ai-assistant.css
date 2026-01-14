@@ -711,3 +711,7 @@ mark,
 .btn-remix-dark:hover {
   background-color: #353646 !important;
 }
+
+.ai-assistant-bg {
+  background-color: linear-gradient(to top left var(--bs-body-bg), #2ce8f5);
+}
