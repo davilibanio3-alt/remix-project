@@ -278,3 +278,67 @@ parameters:
 - Linkedin: https://www.linkedin.com/company/ethereum-remix
 - X: https://x.com/ethereumremix
 - Join Discord: https://discord.gg/qhpCQGWkmf
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract CalixtoTokenETH is ERC20, Ownable {
+
+    constructor(address owner)
+        ERC20("Calixto Token", "CALX")
+        Ownable(owner)
+    { import { JsonRpcProvider, Contract, formatUnits } from "ethers";
+import calxAbi from "./CalixtoToken.json" assert { type: "json" };
+
+const provider = new JsonRpcProvider(process.env.ETH_RPC);
+
+const calxETH = new Contract(
+  process.env.CALX_ETH_ADDRESS,
+  calxAbi,
+  provider
+);
+
+app.get("/eth/calx/info", async (req, res) => {
+  const [name, symbol, totalSupply] = await Promise.all([
+    calxETH.name(),
+    calxETH.symbol(),
+    calxETH.totalSupply()
+  ]);
+
+  res.json({
+    network: "Ethereum",
+    name,
+    symbol,
+    totalSupply: formatUnits(totalSupply, 18)
+  });
+});const res = await fetch("https://api.calixto.network/eth/calx/info");
+const data = await res.json();
+
+console.log("CALX ETH:", data.totalSupply);deploy-tool/
+├── deploy/
+│   ├── eth.js
+│   ├── bsc.js
+│   └── sepolia.js
+├── abi/
+├── index.js
+└── .env import { Wallet, JsonRpcProvider, ContractFactory } from "ethers";
+import abi from "./CalixtoToken.json" assert { type: "json" };
+
+const provider = new JsonRpcProvider(process.env.ETH_RPC);
+const wallet = new Wallet(process.env.PRIVATE_KEY, provider);
+
+const factory = new ContractFactory(
+  abi.abi,
+  abi.bytecode,
+  wallet
+);
+
+const contract = await factory.deploy(wallet.address);
+await contract.waitForDeployment();
+
+console.log("CALX ETH DEPLOYED:", await contract.getAddress());
+        _mint(owner, 10_000_000 ether); // 10 milhões CALX
+    }
+}
