@@ -1,4 +1,126 @@
-<p align="center">
+<p align="center">// SPDX-License-Identifier: MIT
+  pragma solidity ^0.8.25;
+
+  /*
+   Calixto Super (CALX) — BNB Smart Chain (chainId 56)
+   Supply fixo: 10,000,000 CALX (18 decimais)
+   Deploy por EOA habilitado (sem restrições)
+  */
+
+  interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+  }
+
+  interface IERC20Metadata is IERC20 {
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint8);
+  }
+
+  abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+      return msg.sender;
+    }
+  }
+
+  abstract contract Ownable is Context {
+    address private _owner;
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    constructor(address initialOwner) {
+      _transferOwnership(initialOwner);
+    }
+    modifier onlyOwner() {
+      require(owner() == _msgSender(), "Ownable: caller is not the owner");
+      _;
+    }
+    function owner() public view virtual returns (address) { return _owner; }
+    function renounceOwnership() public virtual onlyOwner { _transferOwnership(address(0)); }
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+      require(newOwner != address(0), "Ownable: new owner is the zero address");
+      _transferOwnership(newOwner);
+    }
+    function _transferOwnership(address newOwner) internal virtual {
+      address oldOwner = _owner; _owner = newOwner; emit OwnershipTransferred(oldOwner, newOwner);
+    }
+  }
+
+  contract ERC20 is Context, IERC20, IERC20Metadata {
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
+    uint256 private _totalSupply;
+    string private _name; string private _symbol;
+    constructor(string memory name_, string memory symbol_) { _name = name_; _symbol = symbol_; }
+    function name() public view virtual override returns (string memory) { return _name; }
+    function symbol() public view virtual override returns (string memory) { return _symbol; }
+    function decimals() public view virtual override returns (uint8) { return 18; }
+    function totalSupply() public view virtual override returns (uint256) { return _totalSupply; }
+    function balanceOf(address account) public view virtual override returns (uint256) { return _balances[account]; }
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+      address owner = _msgSender(); _transfer(owner, to, amount); return true;
+    }
+    function allowance(address owner, address spender) public view virtual override returns (uint256) { return _allowances[owner][spender]; }
+    function approve(address spender, uint256 amount) public virtual override returns (bool) { _approve(_msgSender(), spender, amount); return true; }
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+      _spendAllowance(from, _msgSender(), amount); _transfer(from, to, amount); return true;
+    }
+    function _transfer(address from, address to, uint256 amount) internal virtual {
+      require(from != address(0), "ERC20: transfer from the zero address"); require(to != address(0), "ERC20: transfer to the zero address");
+      uint256 fromBalance = _balances[from]; require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+      unchecked { _balances[from] = fromBalance - amount; _balances[to] += amount; } emit Transfer(from, to, amount);
+    }
+    function _mint(address account, uint256 amount) internal virtual {
+      require(account != address(0), "ERC20: mint to the zero address"); _totalSupply += amount; unchecked { _balances[account] += amount; } emit Transfer(address(0), account, amount);
+    }
+    function _burn(address account, uint256 amount) internal virtual {
+      require(account != address(0), "ERC20: burn from the zero address"); uint256 bal = _balances[account]; require(bal >= amount, "ERC20: burn amount exceeds balance");
+      unchecked { _balances[account] = bal - amount; _totalSupply -= amount; } emit Transfer(account, address(0), amount);
+    }
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+      require(owner != address(0) && spender != address(0), "ERC20: zero address"); _allowances[owner][spender] = amount; emit Approval(owner, spender, amount);
+    }
+    function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
+      uint256 current = allowance(owner, spender); if (current != type(uint256).max) { require(current >= amount, "ERC20: insufficient allowance"); unchecked { _approve(owner, spender, current - amount); } }
+    }
+  }
+
+  // Extensão com CAP (supply máximo fixo)
+  abstract contract ERC20Capped is ERC20 {
+    uint256 private immutable _cap;
+    constructor(uint256 cap_) { require(cap_ > 0, "ERC20Capped: cap is 0"); _cap = cap_; }
+    function cap() public view returns (uint256) { return _cap; }
+    function _mint(address account, uint256 amount) internal virtual override {
+      require(totalSupply() + amount <= _cap, "ERC20Capped: cap exceeded"); super._mint(account, amount);
+    }
+  }
+
+  /// Token CALX BSC — supply fixo 10,000,000
+  contract CalixtoToken is ERC20Capped, Ownable {
+    event TokensBurned(address indexed from, uint256 amount);
+    uint256 private constant MAX_SUPPLY = 10_000_000 * 10**18;
+    constructor(address initialRecipient)
+      ERC20("Calixto Super", "CALX")
+      Ownable(msg.sender)
+      ERC20Capped(MAX_SUPPLY)
+    {
+      require(initialRecipient != address(0), "Invalid recipient address");
+      // Mint 100% do supply fixo para a carteira do tesouro
+      _mint(initialRecipient, MAX_SUPPLY);
+    }
+    // Burn voluntário
+    function burn(uint256 amount) public { _burn(msg.sender, amount); emit TokensBurned(msg.sender, amount); }
+    // Burn com allowance
+    function burnFrom(address from, uint256 amount) public { _spendAllowance(from, msg.sender, amount); _burn(from, amount); emit TokensBurned(from, amount); }
+    function tokenInfo() public pure returns (string memory, string memory, uint8, string memory) {
+      return ("Calixto Super", "CALX", 18, "BNB Smart Chain");
+    }
+  }
   <img src="./apps/remix-ide/src/assets/img/icon.png" alt="Remix Logo" width="200"/>
 </p>
 <h3 align="center">Remix Project</h3>
